@@ -1,0 +1,5 @@
+pymongo>=3.12.1
+python-dotenv>=0.19.1
+pyperclip>=1.8.2
+loguru>=0.5.3
+paramiko>=2.8.0
