@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import ipaddress
 import mimetypes
@@ -59,9 +60,10 @@ def insert(file_data):
     db = client[db_name]
     try:
         res = db.files.insert_one(file_data)
+        return True
     except pymongo.errors.ServerSelectionTimeoutError:
         logger.warning('Failed to insert record into MongoDB')
-    return
+        return False
 
 
 def upload(file, domain_name, strict=False):
@@ -72,7 +74,13 @@ def upload(file, domain_name, strict=False):
 
     start = time.time()
     id_ = str(uuid.uuid4()).split('-')[0]
-    out_filename = f'{id_}{Path(file).suffix}'
+
+    if args.keep_name:
+        out_filename = Path(file).name
+    elif args.name:
+        out_filename = args.name
+    else:
+        out_filename = f'{id_}{Path(file).suffix}'
 
     logger.info(f'Uploading "{file}"" with id "{id_}" ...')
     client = paramiko.SSHClient()
@@ -111,15 +119,34 @@ def upload(file, domain_name, strict=False):
         notifcation('Upload complete!',
                     f'Took {round(time.time() - start, 2)}s', file_data['url'])
 
-    insert(file_data)
-    logger.info('Inserted the file into the database successfully!')
+    inserted = insert(file_data)
+    if inserted:
+        ogger.info('Inserted the file into the database successfully!')
     logger.info(file_data['url'])
     print(file_data['url'])
     sftp.close()
     client.close()
-    return
+    return file_data
+
+
+def opts():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i',
+                        '--input',
+                        help='Path to the input file',
+                        type=str,
+                        required=True)
+    parser.add_argument('-n',
+                        '--name',
+                        help='Name the uploaded file',
+                        type=str)
+    parser.add_argument('-k',
+                        '--keep-name',
+                        help='Keep the name of the original file (will overwrite if there is an existing file with the same name!)',
+                        action='store_true')
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    sys.argv = sys.argv + ['/Users/Felis.catus/Desktop/Rhizoecus_cyperalis']
-    upload(sys.argv[1], 'd.aibird.me', strict=False)
+    args = opts()
+    upload(args.input, 'd.aibird.me', strict=False)
