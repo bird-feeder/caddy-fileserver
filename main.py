@@ -21,6 +21,8 @@ from loguru import logger
 
 def notifcation(title, subtitle=None, message=None):
     notifier_bin = '/opt/homebrew/bin/terminal-notifier'
+    if not Path(notifier_bin).exists():
+        return
     subprocess.run(
         shlex.split(f'{notifier_bin} -title \"{title}\" '
                     f'-subtitle \"{subtitle}\" -message \"{message}\"'))
